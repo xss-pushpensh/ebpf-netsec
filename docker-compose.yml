@@ -1,0 +1,20 @@
+services:
+  ebpf-netsec:
+    build: .
+    container_name: ebpf-netsec
+    privileged: true
+    pid: host
+    network_mode: host
+    volumes:
+      - /sys/kernel/debug:/sys/kernel/debug:rw
+      - /sys/kernel/tracing:/sys/kernel/tracing:rw
+      - /lib/modules:/lib/modules:ro
+      - /usr/src:/usr/src:ro
+      - ./data:/app/data
+      - ./ebpf:/app/ebpf:ro
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - DASHBOARD_HOST=0.0.0.0
+      - DASHBOARD_PORT=8080
+      - DETECT_INTERVAL=15
+    restart: unless-stopped

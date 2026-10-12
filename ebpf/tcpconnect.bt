@@ -1,0 +1,36 @@
+#!/usr/bin/env bpftrace
+/*
+ * netsec.bt — Outbound TCP connects + DNS queries
+ */
+
+BEGIN
+{
+    printf("netsec sensor started\n");
+}
+
+/* ---------- TCP IPv4 ---------- */
+tracepoint:syscalls:sys_enter_connect
+{
+    $sa = (struct sockaddr *)args->uservaddr;
+    if ($sa->sa_family == 2) {
+        $sin = (struct sockaddr_in *)args->uservaddr;
+        printf("TCP %s %d %s %s %d\n",
+               strftime("%H:%M:%S", nsecs), pid, comm,
+               ntop($sin->sin_addr.s_addr),
+               bswap($sin->sin_port));
+    }
+}
+
+/* ---------- DNS via udp_sendmsg (kernel-level) ---------- */
+kprobe:udp_sendmsg
+{
+    $sk = (struct sock *)arg0;
+    if ($sk->__sk_common.skc_family == 2) {
+        $dport = bswap($sk->__sk_common.skc_dport);
+        if ($dport == 53) {
+            printf("DNS %s %d %s %s 0\n",
+                   strftime("%H:%M:%S", nsecs), pid, comm,
+                   ntop($sk->__sk_common.skc_daddr));
+        }
+    }
+}
